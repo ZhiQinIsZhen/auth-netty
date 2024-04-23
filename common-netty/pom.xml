@@ -20,7 +20,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>31.1-jre</version>
+            <version>33.1.0-jre</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -45,7 +45,7 @@
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
-            <version>4.1.90.Final</version>
+            <version>4.1.109.Final</version>
         </dependency>
         <dependency>
             <groupId>org.msgpack</groupId>

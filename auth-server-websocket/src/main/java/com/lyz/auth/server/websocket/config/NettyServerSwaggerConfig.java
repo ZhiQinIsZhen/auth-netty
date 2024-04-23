@@ -3,6 +3,7 @@ package com.lyz.auth.server.websocket.config;
 import com.github.xiaoymin.knife4j.spring.annotations.EnableKnife4j;
 import com.github.xiaoymin.knife4j.spring.extension.OpenApiExtensionResolver;
 import com.google.common.collect.Sets;
+import com.lyz.auth.common.netty.constant.AuthNettyConstant;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -32,7 +33,7 @@ import java.util.Set;
 public class NettyServerSwaggerConfig {
 
     private final OpenApiExtensionResolver openApiExtensionResolver;
-    private final static Set<String> PROTOCOL = Sets.newHashSet("https", "http");
+    private final static Set<String> PROTOCOL = Sets.newHashSet(AuthNettyConstant.SCHEME_HTTPS, AuthNettyConstant.SCHEME_HTTP);
 
     public NettyServerSwaggerConfig(OpenApiExtensionResolver openApiExtensionResolver) {
         this.openApiExtensionResolver = openApiExtensionResolver;

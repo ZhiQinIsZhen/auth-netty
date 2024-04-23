@@ -9,6 +9,7 @@ package com.lyz.auth.common.netty.constant;
  */
 public interface AuthNettyConstant {
 
+    //默认线程数
     int DEFAULT_IO_THREADS = Math.min(Runtime.getRuntime().availableProcessors() + 1, 32);
 
     String EVENT_LOOP_BOSS_POOL_NAME  = "NettyServerBoss";
@@ -26,6 +27,7 @@ public interface AuthNettyConstant {
     String OS_WIN_PREFIX = "win";
 
     String SCHEME_HTTP = "http";
+    String SCHEME_HTTPS = "https";
 
     String SCHEME_WS = "ws";
 
