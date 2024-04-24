@@ -1,4 +1,4 @@
-package com.lyz.auth.common.netty.util;
+package com.lyz.auth.websocket.server.util;
 
 import lombok.experimental.UtilityClass;
 
