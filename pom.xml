@@ -10,10 +10,9 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>common-netty</module>
-        <module>auth-client-netty</module>
-        <module>auth-server-netty</module>
-        <module>auth-server-websocket</module>
+        <module>auth-common</module>
+        <module>auth-socket</module>
+        <module>auth-websocket</module>
     </modules>
 
     <properties>
@@ -25,6 +24,10 @@
         <maven.deploy.version>2.8.2</maven.deploy.version>
         <springboot.version>2.7.18</springboot.version>
         <knife4j-openapi2.version>4.5.0</knife4j-openapi2.version>
+        <netty.version>4.1.109.Final</netty.version>
+        <msgpack.version>0.6.12</msgpack.version>
+        <guava.version>33.1.0-jre</guava.version>
+        <hutool.version>5.8.27</hutool.version>
     </properties>
 
     <dependencyManagement>
@@ -40,6 +43,26 @@
                 <groupId>com.github.xiaoymin</groupId>
                 <artifactId>knife4j-openapi2-spring-boot-starter</artifactId>
                 <version>${knife4j-openapi2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+                <version>${netty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-all</artifactId>
+                <version>${hutool.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.msgpack</groupId>
+                <artifactId>msgpack</artifactId>
+                <version>${msgpack.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
