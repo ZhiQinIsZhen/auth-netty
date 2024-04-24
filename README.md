@@ -2,7 +2,7 @@
 
 [![Build Status](https://img.shields.io/badge/Build-ZhiQinlsZhen-red)](https://github.com/ZhiQinIsZhen/spring-security-demo)
 ![Maven](https://img.shields.io/maven-central/v/org.apache.dubbo/dubbo.svg)
-![License](https://img.shields.io/github/license/alibaba/dubbo.svg)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](https://github.com/ZhiQinIsZhen/dubbo-springboot3/blob/main/LICENSE)
 ![Springboot Version](https://img.shields.io/badge/Springboot-2.7.18-brightgreen)
 ![Netty Version](https://img.shields.io/badge/Netty-4.1.109.Final-brightgreen)
 ![Swagger Version](https://img.shields.io/badge/knife4j-4.5.0-brightgreen)
