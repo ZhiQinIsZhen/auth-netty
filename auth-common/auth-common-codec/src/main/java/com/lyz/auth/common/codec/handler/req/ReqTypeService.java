@@ -15,6 +15,7 @@ public interface ReqTypeService {
      * 处理请求
      *
      * @param channel netty channel
+     * @param client is client
      */
-    void process(Channel channel);
+    void process(Channel channel, boolean client);
 }

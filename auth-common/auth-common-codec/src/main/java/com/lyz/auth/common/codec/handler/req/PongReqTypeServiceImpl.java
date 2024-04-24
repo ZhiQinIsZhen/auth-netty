@@ -22,7 +22,10 @@ public class PongReqTypeServiceImpl extends AbstractReqTypeService {
     }
 
     @Override
-    public void process(Channel channel) {
+    public void process(Channel channel, boolean client) {
+        if (!client) {
+            return;
+        }
         if (channel == null) {
             log.warn("can not send pong cause of no channel");
             return;

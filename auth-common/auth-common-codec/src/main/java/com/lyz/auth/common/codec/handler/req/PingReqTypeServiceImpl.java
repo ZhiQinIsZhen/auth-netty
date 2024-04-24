@@ -22,9 +22,12 @@ public class PingReqTypeServiceImpl extends AbstractReqTypeService {
     }
 
     @Override
-    public void process(Channel channel) {
+    public void process(Channel channel, boolean client) {
         if (channel == null) {
             log.warn("can not send ping cause of no channel");
+            return;
+        }
+        if (client) {
             return;
         }
         if (!channel.isWritable()) {
@@ -36,6 +39,9 @@ public class PingReqTypeServiceImpl extends AbstractReqTypeService {
         header.setVersion(1);
         header.setReqType(ReqType.PING.getCode());
         message.setHeader(header);
+        AuthNettyMsg.MsgBody body = new AuthNettyMsg.MsgBody();
+        body.setArgs("ping");
+        message.setBody(body);
         ChannelFuture future = channel.writeAndFlush(message);
         future.addListener(future1 -> {
             if (!future1.isSuccess()) {

@@ -27,6 +27,7 @@ import java.security.PrivateKey;
 import java.util.concurrent.*;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Desc:netty bootstrap
@@ -77,7 +78,7 @@ public class AuthSocketServer implements InitializingBean, DisposableBean {
                         socketChannel.pipeline()
                                 .addLast("decoder", new AuthNettyDecode())
                                 .addLast("encoder", new AuthNettyEncode())
-                                .addLast("server-idle-handler", new IdleStateHandler(0, 0, 15 * 1000, MILLISECONDS))
+                                .addLast("server-idle-handler", new IdleStateHandler(0, 0, 15, SECONDS))
                                 .addLast("handler", new AuthChannelHandler(false));
                     }
                 });

@@ -38,12 +38,17 @@ public class AuthChannelHandler extends SimpleChannelInboundHandler<AuthNettyMsg
             log.warn("unknown reqType: {}", msg.getHeader().getReqType());
             return;
         }
-        ReqTypeService reqTypeService = AbstractReqTypeService.getReqTypeService(reqType);
+        ReqTypeService reqTypeService;
+        if (reqType == ReqType.PING) {
+            reqTypeService = AbstractReqTypeService.getReqTypeService(ReqType.PONG);
+        } else {
+            reqTypeService = AbstractReqTypeService.getReqTypeService(reqType);
+        }
         if (reqTypeService == null) {
             log.warn("unknown reqType: {}, not find its ReqTypeService", reqType);
             return;
         }
-        reqTypeService.process(ctx.channel());
+        reqTypeService.process(ctx.channel(), client);
     }
 
     @Override
@@ -69,8 +74,10 @@ public class AuthChannelHandler extends SimpleChannelInboundHandler<AuthNettyMsg
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof IdleStateEvent) {
+            //空闲事件-ping、pong
             IdleState idleState = ((IdleStateEvent) evt).state();
-            AbstractReqTypeService.getReqTypeService(ReqType.PING).process(ctx.channel());
+            log.info("idle state : {}", idleState);
+            AbstractReqTypeService.getReqTypeService(ReqType.PING).process(ctx.channel(), client);
         }
         super.userEventTriggered(ctx, evt);
     }
