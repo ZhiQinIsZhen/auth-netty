@@ -14,7 +14,6 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.util.concurrent.Future;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
@@ -25,8 +24,10 @@ import org.springframework.util.StringUtils;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.channels.UnsupportedAddressTypeException;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -83,25 +84,31 @@ public class AuthSocketClient implements InitializingBean, DisposableBean {
                 });
     }
 
-    private void connect() throws InterruptedException {
+    private void connect() {
         if (channel != null && channel.isActive()) {
+            channel.eventLoop().schedule(this::reconnect, properties.getDelay(), TimeUnit.SECONDS);
             return;
         }
-        final int port = this.getPortByURI();
         ChannelFuture channelFuture = bootstrap.connect(new InetSocketAddress(host, port));
-        channelFuture.addListener((ChannelFutureListener) channelFuture1 -> {
-            if (channelFuture1.isSuccess()) {
-                channel = channelFuture1.channel();
-            } else {
-                channelFuture1.channel().eventLoop().schedule(() -> {
-                    try {
-                        connect();
-                    } catch (Throwable e) {
-                        log.error("connection fail", e);
-                    }
-                }, properties.getDelay(), TimeUnit.SECONDS);
-            }
-        }).sync();
+        channel = channelFuture.channel();
+        channelFuture.addListener((ChannelFutureListener) listener -> {
+                /*if (listener.isSuccess()) {
+                    log.info("channel connect success");
+                } else {
+                    log.error("channel connect failed");
+                }*/
+            channel.eventLoop().schedule(this::reconnect, properties.getDelay(), TimeUnit.SECONDS);
+        });
+        try {
+            channelFuture.sync();
+        } catch (Exception e) {
+            log.error("connect fail", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void reconnect() {
+        Future future = executor.submit(this::connect);
     }
 
     /**
@@ -139,7 +146,7 @@ public class AuthSocketClient implements InitializingBean, DisposableBean {
             if (bootstrap != null) {
                 long timeout = 300L;
                 long quietPeriod = Math.min(properties.getGraceful(), timeout);
-                Future<?> loopGroupShutdownFuture = loopGroup.shutdownGracefully(quietPeriod, timeout, SECONDS);
+                io.netty.util.concurrent.Future<?> loopGroupShutdownFuture = loopGroup.shutdownGracefully(quietPeriod, timeout, SECONDS);
                 loopGroupShutdownFuture.syncUninterruptibly();
             }
         } catch (Throwable e) {
@@ -163,12 +170,6 @@ public class AuthSocketClient implements InitializingBean, DisposableBean {
         boolean ssl = CommonConstant.SCHEME_WSS.equalsIgnoreCase(scheme);
         sslContext = ssl ? SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build() : null;
         this.init();
-        executor.execute(() -> {
-            try {
-                this.connect();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
+        this.reconnect();
     }
 }

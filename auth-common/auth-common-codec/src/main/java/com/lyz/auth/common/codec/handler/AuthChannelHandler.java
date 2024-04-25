@@ -61,6 +61,7 @@ public class AuthChannelHandler extends SimpleChannelInboundHandler<AuthNettyMsg
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         ChannelContext.remove(ctx.channel().id().asLongText());
         super.channelInactive(ctx);
+
     }
 
     @Override
