@@ -5,6 +5,7 @@ import com.lyz.auth.common.codec.encode.AuthNettyEncode;
 import com.lyz.auth.common.codec.handler.AuthChannelHandler;
 import com.lyz.auth.common.util.NettyToolUtil;
 import com.lyz.auth.common.util.constant.CommonConstant;
+import com.lyz.auth.socket.server.properties.AuthNettyServerProperties;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
@@ -19,14 +20,15 @@ import io.netty.util.concurrent.Future;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
 
 import javax.net.ssl.SSLException;
 import java.io.File;
 import java.security.PrivateKey;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
@@ -38,6 +40,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  */
 @Slf4j
 @Service
+@EnableConfigurationProperties(AuthNettyServerProperties.class)
 public class AuthSocketServer implements InitializingBean, DisposableBean {
 
     private static final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
@@ -45,6 +48,12 @@ public class AuthSocketServer implements InitializingBean, DisposableBean {
         thread.setDaemon(true);
         return thread;
     });
+
+    private final AuthNettyServerProperties properties;
+
+    public AuthSocketServer(AuthNettyServerProperties properties) {
+        this.properties = properties;
+    }
 
     private ServerBootstrap bootstrap;
     private EventLoopGroup bossGroup;
@@ -68,9 +77,9 @@ public class AuthSocketServer implements InitializingBean, DisposableBean {
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel socketChannel) throws SSLException {
-                        if (Boolean.parseBoolean(System.getProperty(CommonConstant.SSL_ENABLED_KEY, Boolean.FALSE.toString()))) {
+                        if (properties.isSslEnabled()) {
                             final SslContext sslCtx = SslContextBuilder
-                                    .forServer((PrivateKey) new File("C://code"))
+                                    .forServer((PrivateKey) new File(properties.getSslPathName()))
                                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
                                     .build();
                             socketChannel.pipeline().addLast("negotiation", sslCtx.newHandler(socketChannel.alloc()));
@@ -78,7 +87,10 @@ public class AuthSocketServer implements InitializingBean, DisposableBean {
                         socketChannel.pipeline()
                                 .addLast("decoder", new AuthNettyDecode())
                                 .addLast("encoder", new AuthNettyEncode())
-                                .addLast("server-idle-handler", new IdleStateHandler(0, 0, 15, SECONDS))
+                                .addLast("server-idle-handler", new IdleStateHandler(
+                                        properties.getReaderIdleTime(),
+                                        properties.getWriterIdleTime(),
+                                        properties.getAllIdleTime(), SECONDS))
                                 .addLast("handler", new AuthChannelHandler(false));
                     }
                 });
@@ -86,7 +98,7 @@ public class AuthSocketServer implements InitializingBean, DisposableBean {
 
     private void open() {
         // bind
-        ChannelFuture channelFuture = bootstrap.bind(Integer.parseInt(System.getProperty(CommonConstant.NETTY_SERVER_PORT, "9999")));
+        ChannelFuture channelFuture = bootstrap.bind(properties.getPort());
         channelFuture.syncUninterruptibly();
         channel = channelFuture.channel();
     }
@@ -102,10 +114,10 @@ public class AuthSocketServer implements InitializingBean, DisposableBean {
 
         try {
             if (bootstrap != null) {
-                long timeout = 2000L;
-                long quietPeriod = Math.min(2000L, timeout);
-                io.netty.util.concurrent.Future<?> bossGroupShutdownFuture = bossGroup.shutdownGracefully(quietPeriod, timeout, MILLISECONDS);
-                Future<?> workerGroupShutdownFuture = workerGroup.shutdownGracefully(quietPeriod, timeout, MILLISECONDS);
+                long timeout = 300L;
+                long quietPeriod = Math.min(properties.getGraceful(), timeout);
+                io.netty.util.concurrent.Future<?> bossGroupShutdownFuture = bossGroup.shutdownGracefully(quietPeriod, timeout, SECONDS);
+                Future<?> workerGroupShutdownFuture = workerGroup.shutdownGracefully(quietPeriod, timeout, SECONDS);
                 bossGroupShutdownFuture.syncUninterruptibly();
                 workerGroupShutdownFuture.syncUninterruptibly();
             }

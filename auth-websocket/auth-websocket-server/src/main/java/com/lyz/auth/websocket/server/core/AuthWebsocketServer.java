@@ -7,6 +7,7 @@ import com.lyz.auth.websocket.server.decode.MsgPackDecoder;
 import com.lyz.auth.websocket.server.decode.WebSocketDecoder;
 import com.lyz.auth.websocket.server.encode.MsgPackEncoder;
 import com.lyz.auth.websocket.server.encode.WebSocketEncoder;
+import com.lyz.auth.websocket.server.properties.AuthNettyServerProperties;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
@@ -24,6 +25,7 @@ import io.netty.util.concurrent.Future;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
 
 import javax.net.ssl.SSLException;
@@ -32,7 +34,7 @@ import java.security.PrivateKey;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Desc:
@@ -43,6 +45,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  */
 @Slf4j
 @Service
+@EnableConfigurationProperties(AuthNettyServerProperties.class)
 public class AuthWebsocketServer implements InitializingBean, DisposableBean {
 
     private static final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
@@ -50,6 +53,12 @@ public class AuthWebsocketServer implements InitializingBean, DisposableBean {
         thread.setDaemon(true);
         return thread;
     });
+
+    private final AuthNettyServerProperties properties;
+
+    public AuthWebsocketServer(AuthNettyServerProperties properties) {
+        this.properties = properties;
+    }
 
     private ServerBootstrap bootstrap;
     private EventLoopGroup bossGroup;
@@ -78,15 +87,21 @@ public class AuthWebsocketServer implements InitializingBean, DisposableBean {
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel socketChannel) throws SSLException {
-                        if (Boolean.parseBoolean(System.getProperty(CommonConstant.SSL_ENABLED_KEY, Boolean.FALSE.toString()))) {
-                            final SslContext sslCtx = SslContextBuilder.forServer((PrivateKey) new File("C://code")).trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+                        if (properties.isSslEnabled()) {
+                            final SslContext sslCtx = SslContextBuilder
+                                    .forServer((PrivateKey) new File(properties.getSslPathName()))
+                                    .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
                             socketChannel.pipeline().addLast("negotiation", sslCtx.newHandler(socketChannel.alloc()));
                         }
                         socketChannel.pipeline()
                                 .addLast("codec-http", new HttpServerCodec())
                                 .addLast("aggregator", new HttpObjectAggregator(65536))
-                                .addLast("web-socket", new WebSocketServerProtocolHandler("/ws", null, true))
-                                .addLast("server-idle-handler", new IdleStateHandler(60 * 1000, 0, 0, MILLISECONDS))
+                                .addLast("web-socket", new WebSocketServerProtocolHandler(properties.getWebsocketPath(), null, true))
+                                .addLast("server-idle-handler", new IdleStateHandler(
+                                        properties.getReaderIdleTime(),
+                                        properties.getWriterIdleTime(),
+                                        properties.getAllIdleTime(),
+                                        SECONDS))
                                 .addLast("web-socket-decoder", new WebSocketDecoder())
                                 .addLast("web-socket-encoder", new WebSocketEncoder())
                                 .addLast("decoder", new MsgPackDecoder())
@@ -96,18 +111,9 @@ public class AuthWebsocketServer implements InitializingBean, DisposableBean {
                     }
                 });
         // bind
-        ChannelFuture channelFuture = bootstrap.bind(getPort());
+        ChannelFuture channelFuture = bootstrap.bind(properties.getPort());
         channelFuture.syncUninterruptibly();
         channel = channelFuture.channel();
-    }
-
-    /**
-     * 获取port
-     *
-     * @return
-     */
-    private int getPort() {
-        return Integer.parseInt(System.getProperty(CommonConstant.NETTY_SERVER_PORT, "9998"));
     }
 
     private void close() {
@@ -122,10 +128,10 @@ public class AuthWebsocketServer implements InitializingBean, DisposableBean {
 
         try {
             if (bootstrap != null) {
-                long timeout = 2000L;
-                long quietPeriod = Math.min(2000L, timeout);
-                Future<?> bossGroupShutdownFuture = bossGroup.shutdownGracefully(quietPeriod, timeout, MILLISECONDS);
-                Future<?> workerGroupShutdownFuture = workerGroup.shutdownGracefully(quietPeriod, timeout, MILLISECONDS);
+                long timeout = 300L;
+                long quietPeriod = Math.min(properties.getGraceful(), timeout);
+                Future<?> bossGroupShutdownFuture = bossGroup.shutdownGracefully(quietPeriod, timeout, SECONDS);
+                Future<?> workerGroupShutdownFuture = workerGroup.shutdownGracefully(quietPeriod, timeout, SECONDS);
                 bossGroupShutdownFuture.syncUninterruptibly();
                 workerGroupShutdownFuture.syncUninterruptibly();
             }

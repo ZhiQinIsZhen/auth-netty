@@ -5,6 +5,7 @@ import com.lyz.auth.common.codec.encode.AuthNettyEncode;
 import com.lyz.auth.common.codec.handler.AuthChannelHandler;
 import com.lyz.auth.common.util.NettyToolUtil;
 import com.lyz.auth.common.util.constant.CommonConstant;
+import com.lyz.auth.socket.client.properties.AuthNettyServerProperties;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.epoll.EpollSocketChannel;
@@ -14,11 +15,10 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.concurrent.Future;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -29,7 +29,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Desc:client bootstrap
@@ -40,6 +40,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  */
 @Slf4j
 @Service
+@EnableConfigurationProperties(AuthNettyServerProperties.class)
 public class AuthSocketClient implements InitializingBean, DisposableBean {
 
     private static final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
@@ -48,8 +49,11 @@ public class AuthSocketClient implements InitializingBean, DisposableBean {
         return thread;
     });
 
-    @Value("${auth.netty.server.address}")
-    private String serverAddress;
+    private final AuthNettyServerProperties properties;
+
+    public AuthSocketClient(AuthNettyServerProperties properties) {
+        this.properties = properties;
+    }
 
     private Bootstrap bootstrap;
     private EventLoopGroup loopGroup;
@@ -95,7 +99,7 @@ public class AuthSocketClient implements InitializingBean, DisposableBean {
                     } catch (Throwable e) {
                         log.error("connection fail", e);
                     }
-                }, 10, TimeUnit.SECONDS);
+                }, properties.getDelay(), TimeUnit.SECONDS);
             }
         }).sync();
     }
@@ -133,9 +137,9 @@ public class AuthSocketClient implements InitializingBean, DisposableBean {
 
         try {
             if (bootstrap != null) {
-                long timeout = 2000L;
-                long quietPeriod = Math.min(2000L, timeout);
-                Future<?> loopGroupShutdownFuture = loopGroup.shutdownGracefully(quietPeriod, timeout, MILLISECONDS);
+                long timeout = 300L;
+                long quietPeriod = Math.min(properties.getGraceful(), timeout);
+                Future<?> loopGroupShutdownFuture = loopGroup.shutdownGracefully(quietPeriod, timeout, SECONDS);
                 loopGroupShutdownFuture.syncUninterruptibly();
             }
         } catch (Throwable e) {
@@ -145,10 +149,10 @@ public class AuthSocketClient implements InitializingBean, DisposableBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        if (!StringUtils.hasText(serverAddress)) {
+        if (!StringUtils.hasText(properties.getUrl())) {
             throw new IllegalArgumentException("please add netty server address");
         }
-        uri = new URI(serverAddress);
+        uri = new URI(properties.getUrl());
         scheme = uri.getScheme() == null ? CommonConstant.SCHEME_HTTP : uri.getScheme();
         if (!CommonConstant.SCHEME_WS.equalsIgnoreCase(scheme) && !CommonConstant.SCHEME_WSS.equalsIgnoreCase(scheme)) {
             log.error("Only WS(S) is supported");

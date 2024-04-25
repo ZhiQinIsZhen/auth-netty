@@ -27,6 +27,7 @@ public class ChannelContext {
      * @return channel
      */
     public static Channel computeIfAbsent(Channel channel) {
+        log.info("new channel connect: {}", channel.id().asLongText());
         return CHANNEL_MAP.computeIfAbsent(channel.id().asLongText(), (v) -> channel);
     }
 
@@ -46,6 +47,7 @@ public class ChannelContext {
      * @param channelId channelId
      */
     public static void remove(String channelId) {
+        log.info("a channel disconnect: {}", channelId);
         CHANNEL_MAP.remove(channelId);
     }
 

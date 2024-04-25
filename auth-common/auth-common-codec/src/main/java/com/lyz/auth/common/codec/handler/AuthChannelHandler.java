@@ -76,7 +76,7 @@ public class AuthChannelHandler extends SimpleChannelInboundHandler<AuthNettyMsg
         if (evt instanceof IdleStateEvent) {
             //空闲事件-ping、pong
             IdleState idleState = ((IdleStateEvent) evt).state();
-            log.info("idle state : {}", idleState);
+            log.debug("idle state : {}", idleState);
             AbstractReqTypeService.getReqTypeService(ReqType.PING).process(ctx.channel(), client);
         }
         super.userEventTriggered(ctx, evt);

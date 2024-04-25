@@ -35,6 +35,4 @@ public interface CommonConstant {
     String DEFAULT_CLIENT_POOL_NAME = "auth-client-pool";
 
     String SSL_ENABLED_KEY = "ssl-enabled";
-
-    String NETTY_SERVER_PORT = "netty.server.port";
 }
